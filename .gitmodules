@@ -1,0 +1,9 @@
+[submodule "prereq-ts"]
+	path = prereq-ts
+	url = https://github.com/santy311/turbin3-prereq-ts
+[submodule "prereq-rs"]
+	path = prereq-rs
+	url = https://github.com/santy311/turbin3-prereq-rust
+[submodule "solana-starter"]
+	path = solana-starter
+	url = https://github.com/solana-turbin3/solana-starter
