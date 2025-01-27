@@ -4,3 +4,6 @@
 [submodule "prereq-rs"]
 	path = prereq-rs
 	url = https://github.com/santy311/turbin3-prereq-rust
+[submodule "anchor_escrow"]
+	path = anchor_escrow
+	url = https://github.com/santy311/anchor_escrow.git
