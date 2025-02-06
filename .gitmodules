@@ -7,3 +7,6 @@
 [submodule "anchor_escrow"]
 	path = anchor_escrow
 	url = https://github.com/santy311/anchor_escrow.git
+[submodule "nft-marketplace"]
+	path = nft-marketplace
+	url = https://github.com/santy311/nft-marketplace
