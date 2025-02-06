@@ -10,3 +10,6 @@
 [submodule "nft-marketplace"]
 	path = nft-marketplace
 	url = https://github.com/santy311/nft-marketplace
+[submodule "anchor-vault"]
+	path = anchor-vault
+	url = https://github.com/santy311/solana-vault
