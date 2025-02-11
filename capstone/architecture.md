@@ -192,7 +192,7 @@ sequenceDiagram
     Market->>YesMint: Request mint tokens
     YesMint->>YesPool: Mint to Yes Pool
     Market->>NoMint: Request mint tokens
-    NoMint->>NoPool: Mint to Yes Pool
+    NoMint->>NoPool: Mint to No Pool
 
     alt Buy Yes Prediction
         YesPool->>TraderYesATA: Transfer Yes tokens
