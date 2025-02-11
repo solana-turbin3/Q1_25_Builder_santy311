@@ -88,29 +88,34 @@ sequenceDiagram
     participant YMint as Yes Token Mint
     participant NMint as No Token Mint
     participant LP as Liquidity Pool
+    participant YesPool as Yes Token Pool
+    participant NoPool as No Token Pool
 
     Creator->>Market: Initialize Market Account With Liquidity
     Note over Market: Sets creator, description,<br/>fee percentage
 
-    Market->>YMint: Mint Yes Token Mint
-    Market->>NMint: Mint No Token Mint
-
     Creator->>LP: Deposit initial liquidity (USDC)
+
+    Market->>YMint: Mint Yes Token Mint
+    YMint ->> YesPool: Mint Token to YesPool
+    Market->>NMint: Mint No Token Mint
+    NMint ->> NoPool: Mint Token to No pool
+
     LP->>Market: Update total_liquidity_shares
 
     Note over Market: Market is now active<br/>and ready for trading
 
 ```
 
-#### Market Creator initializes the Market Account with:
+#### Market Creator initializes the Market Account with
 
-    * Market description
-    * Fee percentage
-    * Liquidity
-    * Yes Token Mint is created with Market as authority
-    * No Token Mint is created with Market as authority
-    * Initial USDC is deposited into Liquidity Pool
-    * Market's total_liquidity_shares is updated
+- Market description
+- Fee percentage
+- Liquidity
+- Yes Token Mint is created with Market as authority
+- No Token Mint is created with Market as authority
+- Initial USDC is deposited into Liquidity Pool
+- Market's total_liquidity_shares is updated
 
 ### Provide Initial Liquidity
 
@@ -118,26 +123,23 @@ sequenceDiagram
 sequenceDiagram
     participant LP as Liquidity Provider
     participant Market as Market Account
-    participant Pool as Liquidity Pool
+    participant LP_PDA as Liquidity Pool PDA
     participant YMint as Yes Token Mint
     participant NMint as No Token Mint
 
-    LP->>Market: Approve USDC transfer
-    LP->>Market: Request to add liquidity
+    LP->>Market: invoke addLiquidity
 
-    Pool->>Market: Check current prices
+    Market->>Market: Calculate share using AMM
     Market ->> YMint: Mint Yes Tokens
-    Market ->> NMint: Mint No Tokens
+    YMint ->> YesPool: Mint Token to YesPool
+    Market->>NMint: Mint No Token Mint
+    NMint ->> NoPool: Mint Token to No pool
 
-    Market->>Pool: Add Liquidity to LP PDA
+    LP->>LP_PDA: Add Liquidity to LP PDA
 
     alt Equal prices (0.5/0.5)
         Note over LP,Pool: No outcome tokens<br/>when prices are equal
     else Unequal prices
-        Market->>Pool: Calculate token distribution
-        Note over Market: Calculate shares based on<br/>constant product formula
-
-        Pool->>YMint: Mint LP tokens
 
         alt Yes token is more likely
             YMint->>LP: Mint Yes tokens
@@ -148,7 +150,7 @@ sequenceDiagram
         end
     end
 
-    Pool->>Market: Update total_liquidity_shares
+    Market->>Market: Update total_liquidity_shares
 
     Note over LP,Pool: Liquidity provision complete<br/>LP has position established
 ```
@@ -170,41 +172,41 @@ two main scenarios:
 3. USDC is transferred to the pool
 4. Market's total_liquidity_shares is updated
 
-## Buy/ Sell Shares
+## Buy Prediction
 
 ```mermaid
 sequenceDiagram
     participant Trader
     participant Market
-    participant Pool
+    participant LP_Pool
     participant YesMint
     participant NoMint
+    participant YesPool
+    participant NoPool
     participant TraderYesATA
     participant TraderNoATA
 
     Trader->>Market: Request to buy prediction
     Note over Market: Calculate token amounts<br/>using AMM formula
 
-    Market->>Pool: Calculate fees
-    Note over Pool: Apply fee percentage<br/>from market settings
-
-    Pool->>Market: Return final amount
+    Market->>YesMint: Request mint tokens
+    YesMint->>YesPool: Mint to Yes Pool
+    Market->>NoMint: Request mint tokens
+    NoMint->>NoPool: Mint to Yes Pool
 
     alt Buy Yes Prediction
-        Market->>YesMint: Request mint tokens
-        YesMint->>TraderYesATA: Mint Yes tokens
-        Note over TraderYesATA: Yes tokens minted<br/>to trader's account
+        YesPool->>TraderYesATA: Transfer Yes tokens
+        Note over TraderYesATA: Yes tokens transferred<br/>to trader's account
     else Buy No Prediction
-        Market->>NoMint: Request mint tokens
-        NoMint->>TraderNoATA: Mint No tokens
-        Note over TraderNoATA: No tokens minted<br/>to trader's account
+        NoPool->>TraderNoATA: Transfer No tokens
+        Note over TraderNoATA: No tokens transferred<br/>to trader's account
     end
 
     Market->>Trader: Return trade confirmation
     Note over Trader: Trader now holds<br/>prediction tokens
 ```
 
-### Trader buys/sells tokens
+### Trader Buys Prediction
 
 1. Initial Request:
 
@@ -229,29 +231,28 @@ sequenceDiagram
     participant Pool
     participant YesMint
     participant NoMint
+    participant YesPool
+    participant NoPool
     participant TraderYesATA
     participant TraderNoATA
 
     Trader->>Market: Request to sell prediction
     Note over Market: Calculate token amounts<br/>using AMM formula
 
-    Market->>Pool: Calculate fees
-    Note over Pool: Apply fee percentage<br/>from market settings
-
-    Pool->>Market: Return final amount
 
     alt Sell Yes Prediction
+        TraderYesATA->>YesPool: Send Yes tokens
         Market->>YesMint: Initiate Burn Token
-        TraderYesATA->>YesMint: Send Yes tokens
         YesMint->>YesMint: Burn Yes tokens
-        Note over TraderYesATA: Yes tokens burned<br/>from trader's account
+        Note over YesPool: Yes tokens burned<br/>from Yes Pool
     else Sell No Prediction
         Market->>NoMint: Initiate Burn Token
-        TraderNoATA->>NoMint: Send No tokens
+        TraderNoATA->>NoPool: Send No tokens
         NoMint->>NoMint: Burn No tokens
-        Note over TraderNoATA: No tokens burned<br/>from trader's account
+        Note over NoPool: No tokens burned<br/>from No Pool
     end
 
+    Pool ->> Trader: Return USDC from selling
     Market->>Trader: Return trade confirmation
     Note over Trader: Trader receives USDC<br/>for sold prediction
 ```
@@ -279,6 +280,8 @@ sequenceDiagram
     participant Pool
     participant YesMint
     participant NoMint
+    participant YesPool
+    participant NoPool
     participant TraderYesATA
     participant TraderNoATA
 
@@ -287,11 +290,11 @@ sequenceDiagram
     Note over Market: Verify market is resolved<br/>and outcome is set
 
     alt Yes Outcome Won
-        TraderYesATA->>YesMint: Send Yes tokens
-        YesMint->>YesMint: Burn Yes tokens
-        Market->>Pool: Calculate redemption amount
-        Pool->>Market: Return amount
-        Market->>Trader: Send winning amount
+        TraderYesATA->>YesPool: Send Yes tokens
+        Market->>Market: Calculate redemption amount
+        Market->>YesMint: Initiate Burn Yes tokens
+        YesMint->>YesPool: Burn Yes Tokens
+        Pool->>Trader: Send winning amount
         Note over Trader: Receives 1 USDC per token
 
         opt Has No Tokens
@@ -301,11 +304,11 @@ sequenceDiagram
         end
 
     else No Outcome Won
-        TraderNoATA->>NoMint: Send No tokens
-        NoMint->>NoMint: Burn No tokens
-        Market->>Pool: Calculate redemption amount
-        Pool->>Market: Return amount
-        Market->>Trader: Send winning amount
+        TraderNoATA->>NoPool: Send No tokens
+        Market->>Market: Calculate redemption amount
+        Market->>NoMint: Initiate Burn No tokens
+        NoMint->>NoPool: Burn No tokens
+        Pool->>Trader: Send winning amount
         Note over Trader: Receives 1 USDC per token
 
         opt Has Yes Tokens
@@ -315,7 +318,6 @@ sequenceDiagram
         end
     end
 
-    Market->>Pool: Update pool state
     Note over Market: Redemption complete
 ```
 
