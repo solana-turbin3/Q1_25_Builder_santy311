@@ -59,6 +59,7 @@ classDiagram
     class TokenAccounts {
         +Yes SPL Token
         +No SPL Token
+        +LP SPL Token
     }
 
     MarketCreator --* Market : Creates & Resolves
@@ -79,7 +80,7 @@ key components of the F4See prediction market architecture:
 - Traders: Can buy/sell predictions using USDC and receive Yes/No SPL tokens
 - Token Accounts: Manages the Yes/No SPL tokens that represent predictions
 
-### Create Market - SD
+### Create Market - Sequence Diagram
 
 ```mermaid
 sequenceDiagram
@@ -87,6 +88,7 @@ sequenceDiagram
     participant Market as Market Account
     participant YMint as Yes Token Mint
     participant NMint as No Token Mint
+    participant LPMint as LP Token Mint
     participant LP as Liquidity Pool
     participant YesPool as Yes Token Pool
     participant NoPool as No Token Pool
@@ -102,7 +104,7 @@ sequenceDiagram
     NMint ->> NoPool: Mint Token to No pool
 
     LP->>Market: Update total_liquidity_shares
-
+    LPMint ->> Creator: Mint LP Token to creator
     Note over Market: Market is now active<br/>and ready for trading
 
 ```
@@ -116,6 +118,7 @@ sequenceDiagram
 - No Token Mint is created with Market as authority
 - Initial USDC is deposited into Liquidity Pool
 - Market's total_liquidity_shares is updated
+- LP Token is given for the liquidity provided
 
 ### Provide Initial Liquidity
 
@@ -123,22 +126,24 @@ sequenceDiagram
 sequenceDiagram
     participant LP as Liquidity Provider
     participant Market as Market Account
-    participant LP_PDA as Liquidity Pool PDA
+    participant LP_PDA as Liquidity Pool
     participant YMint as Yes Token Mint
     participant NMint as No Token Mint
+    participant LPMint as LP Token Mint
 
     LP->>Market: invoke addLiquidity
 
     Market->>Market: Calculate share using AMM
+    LP->>LP_PDA: Add Liquidity to LP PDA
     Market ->> YMint: Mint Yes Tokens
     YMint ->> YesPool: Mint Token to YesPool
     Market->>NMint: Mint No Token Mint
     NMint ->> NoPool: Mint Token to No pool
+    LPMint ->> LP: Mint LP Token to LP
 
-    LP->>LP_PDA: Add Liquidity to LP PDA
 
     alt Equal prices (0.5/0.5)
-        Note over LP,Pool: No outcome tokens<br/>when prices are equal
+        Note over LP: No outcome tokens<br/>when prices are equal
     else Unequal prices
 
         alt Yes token is more likely
@@ -152,7 +157,7 @@ sequenceDiagram
 
     Market->>Market: Update total_liquidity_shares
 
-    Note over LP,Pool: Liquidity provision complete<br/>LP has position established
+    Note over LP: Liquidity provision complete<br/>LP has position established
 ```
 
 ### Liquidity Provided provides liquidity
@@ -170,7 +175,9 @@ two main scenarios:
    - Additional outcome tokens for the more likely outcome to LP
 
 3. USDC is transferred to the pool
-4. Market's total_liquidity_shares is updated
+4. LP Token is given for the liquidity provided
+
+5. Market's total_liquidity_shares is updated
 
 ## Buy Prediction
 
