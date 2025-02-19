@@ -13,3 +13,6 @@
 [submodule "anchor-vault"]
 	path = anchor-vault
 	url = https://github.com/santy311/solana-vault
+[submodule "capstone/code"]
+	path = capstone/code
+	url = https://github.com/santy311/Fsee.git
